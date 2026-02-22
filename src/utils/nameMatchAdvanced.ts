@@ -168,7 +168,7 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
 
     const coverage = matchedScore / inputTokens.length;
     const precision = matchedScore / givenTokens.length;
-    score = Math.round((coverage * 0.6 + precision * 0.4) * 100);
+    score = Math.round((coverage * 0.65 + precision * 0.5) * 100);
 
     if (score >= 98 && inputName !== givenName) score = 95;
   }
