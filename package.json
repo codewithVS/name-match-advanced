@@ -1,0 +1,29 @@
+{
+    "name": "name-match-advanced",
+    "version": "1.0.2",
+    "description": "A robust name matching utility with initials handling and fuzzy logic useful for fintech and insurance kyc, ocr and crm",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/codewithVS/name-match-advanced.git"
+    },
+    "homepage": "https://github.com/codewithVS/name-match-advanced#readme",
+    "scripts": {
+        "build": "tsc",
+        "example": "ts-node src/examples/example.ts"
+    },
+    "keywords": [
+        "name-matching",
+        "fuzzy",
+        "initials",
+        "levenshtein",
+        "name-matching-kyc",
+        "name-matching-ocr"
+    ],
+    "license": "MIT",
+    "devDependencies": {
+        "ts-node": "^10.9.1",
+        "typescript": "^5.3.0"
+    }
+}
