@@ -1,7 +1,7 @@
 {
     "name": "name-match-advanced",
     "version": "1.0.4",
-    "description": "A robust name matching utility with initials handling and fuzzy logic useful for fintech and insurance kyc, ocr and crm",
+    "description": "A Powerful robust name matching utility with initials handling and fuzzy logic useful for fintech and insurance kyc, ocr and crm",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "repository": {
@@ -19,7 +19,9 @@
         "initials",
         "levenshtein",
         "name-matching-kyc",
-        "name-matching-ocr"
+        "name-matching-ocr",
+        "name-match",
+        "person-name-match"
     ],
     "license": "MIT",
     "devDependencies": {
