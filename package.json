@@ -1,6 +1,6 @@
 {
     "name": "name-match-advanced",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "A Powerful robust name matching utility with initials handling and fuzzy logic useful for fintech and insurance kyc, ocr and crm",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
