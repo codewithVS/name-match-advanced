@@ -48,8 +48,8 @@ const result = matchNames('Sagar Kumar Jangid', 'Sagar Kumar J');
 console.log(result);
 /*
 {
-  inputName: 'Vikash Kumar Yadav',
-  givenName: 'Vikash Kumar Y',
+  inputName: 'Sagar Kumar Jangid',
+  givenName: 'Sagar Kumar J',
   percentage: 95,
   remark: 'High Similarity'
 }
@@ -68,8 +68,8 @@ const result = matchNames('Sagar Kumar Jangid', 'Sagar Kumar J');
 console.log(result);
 /*
 {
-  inputName: 'Vikash Kumar Yadav',
-  givenName: 'Vikash Kumar Y',
+  inputName: 'Sagar Kumar Jangid',
+  givenName: 'Sagar Kumar J',
   percentage: 95,
   remark: 'High Similarity'
 }
