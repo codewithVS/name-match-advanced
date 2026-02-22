@@ -1,5 +1,17 @@
 # name-match-advanced
 
+---
+
+🚀 **Live Interactive Demo:**  
+👉 
+<p align="center">
+  <a href="https://name-match-advanced-demo.vercel.app/" target="_blank">
+    <img src="https://img.shields.io/badge/Try%20DEMO-Live%20Interactive%20Demo-4F46E5?style=for-the-badge&logo=vercel&logoColor=white" />
+  </a>
+</p>
+
+---
+
 A Most Powerful robust name matching library for Node.js and TypeScript that combines multiple strategies — initials handling, token swapping, fuzzy similarity, and prefix normalization — for accurate name matching in **fintech, insurance, CRM, KYC, OCR and other applications**.
 
 [![npm version](https://img.shields.io/npm/v/name-match-advanced)](https://www.npmjs.com/package/name-match-advanced)
