@@ -104,6 +104,9 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
 
   let score = 0;
 
+  // =============================
+  // 1️⃣ Exact Match
+  // =============================
   if (inputName === givenName) {
     score = 100;
   }
@@ -111,7 +114,6 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
   else if (isSwappedMatch(inputTokens, givenTokens)) {
     score = 99;
   }
-
   else if (
     givenTokens.every((t) => inputTokens.includes(t)) ||
     inputTokens.every((t) => givenTokens.includes(t))
@@ -189,16 +191,20 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
   const givenHasFull = givenTokens.some((t) => t.length > 1);
   const inputAllInitials = inputTokens.every((t) => t.length === 1);
   const givenAllInitials = givenTokens.every((t) => t.length === 1);
+
   const fullTokenMatchExists = givenTokens.some(
     (g) => g.length > 1 && inputTokens.includes(g)
   );
 
-  const fullMatches = givenTokens.filter(
+  const strongFullMatches = givenTokens.filter(
     (g) => g.length > 1 && inputTokens.includes(g)
   );
 
+  const givenHasInitialOnly = givenTokens.some((t) => t.length === 1);
+
+
   const hasSingleInitialMismatch =
-    fullMatches.length === 1 &&
+    strongFullMatches.length === 1 &&
     inputTokens.length === 2 &&
     givenTokens.length === 2 &&
     (inputTokens.some((t) => t.length === 1) ||
@@ -208,13 +214,20 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
     score = Math.max(score, 85);
   }
 
+  if (
+    strongFullMatches.length === 1 &&
+    givenHasInitialOnly &&
+    inputTokens.length > givenTokens.length
+  ) {
+    score = Math.max(score, 82);
+  }
+
 
   if ((inputHasFull && givenAllInitials) || (givenHasFull && inputAllInitials)) {
     score = Math.min(score, 65);
   } else if (inputHasFull && givenHasFull && !fullTokenMatchExists) {
     score = Math.min(score, 65);
   }
-
 
   let remark: string;
   if (score === 100) remark = "Exact Match";
