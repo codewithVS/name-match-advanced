@@ -179,13 +179,31 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
       ? inputTokens
       : givenTokens;
 
-  let exactShortMatches = 0;
+      let strongShortMatches = 0;
 
-  for (const s of shorterTokens) {
-    if (longerTokens.includes(s)) {
-      exactShortMatches++;
-    }
-  }
+      for (const s of shorterTokens) {
+        let matched = false;
+      
+        for (const l of longerTokens) {
+          if (s === l) {
+            matched = true;
+            break;
+          }
+      
+          // Allow initial match (R vs Ramaswamy)
+          if (s.length === 1 && l.startsWith(s)) {
+            matched = true;
+            break;
+          }
+      
+          if (l.length === 1 && s.startsWith(l)) {
+            matched = true;
+            break;
+          }
+        }
+      
+        if (matched) strongShortMatches++;
+      }
 
   const validShortName =
   shorterTokens.length > 1 ||
@@ -193,7 +211,7 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
 
 if (
   validShortName &&
-  exactShortMatches === shorterTokens.length
+  strongShortMatches === shorterTokens.length
 ) {
     return {
       inputName: originalInput,
