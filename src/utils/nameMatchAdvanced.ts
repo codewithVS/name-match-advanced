@@ -99,123 +99,210 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
   inputName = mergeInitials(normalizeName(inputName));
   givenName = mergeInitials(normalizeName(givenName));
 
-  let inputTokens = tokenize(inputName);
-  let givenTokens = tokenize(givenName);
+  const inputTokens = tokenize(inputName);
+  const givenTokens = tokenize(givenName);
 
-  inputTokens = expandCombinedInitials(inputTokens);
-  givenTokens = expandCombinedInitials(givenTokens);
-
-  let score = 0;
+  const inputNoSpace = inputName.replace(/\s+/g, "");
+  const givenNoSpace = givenName.replace(/\s+/g, "");
 
   if (inputName === givenName) {
-    score = 100;
+    return {
+      inputName: originalInput,
+      givenName: originalGiven,
+      percentage: 100,
+      remark: "Exact Match",
+    };
   }
 
-  else if (isSwappedMatch(inputTokens, givenTokens)) {
-    score = 99;
+  if (isSwappedMatch(inputTokens, givenTokens)) {
+    return {
+      inputName: originalInput,
+      givenName: originalGiven,
+      percentage: 99,
+      remark: "High Similarity",
+    };
   }
 
-  else if (
-    givenTokens.every((t) => inputTokens.includes(t)) ||
-    inputTokens.every((t) => givenTokens.includes(t))
-  ) {
-    const longer = Math.max(inputTokens.length, givenTokens.length);
-    const shorter = Math.min(inputTokens.length, givenTokens.length);
-    const diff = longer - shorter;
+  if (inputNoSpace === givenNoSpace) {
+    return {
+      inputName: originalInput,
+      givenName: originalGiven,
+      percentage: 96,
+      remark: "High Similarity",
+    };
+  }
 
-    const hasFullTokenMatch = givenTokens.some(
-      (t) => t.length > 1 && inputTokens.includes(t)
-    );
+  const mergeDistance = levenshtein(inputNoSpace, givenNoSpace);
+  const mergeSimilarity =
+    1 - mergeDistance / Math.max(inputNoSpace.length, givenNoSpace.length);
 
-    if (hasFullTokenMatch) {
-      if (diff === 0) score = 99;
-      else if (diff === 1) score = 94;
-      else score = 90;
-    } else {
-      const matchRatio = shorter / longer;
-      score = Math.round(matchRatio * 60);
+  if (mergeSimilarity >= 0.88) {
+    return {
+      inputName: originalInput,
+      givenName: originalGiven,
+      percentage: Math.round(mergeSimilarity * 100),
+      remark: "High Similarity",
+    };
+  }
+
+  const shorterTokens =
+    inputTokens.length <= givenTokens.length
+      ? inputTokens
+      : givenTokens;
+
+  const longerTokens =
+    inputTokens.length > givenTokens.length
+      ? inputTokens
+      : givenTokens;
+
+  let exactShortMatches = 0;
+
+  for (const s of shorterTokens) {
+    if (longerTokens.includes(s)) {
+      exactShortMatches++;
     }
   }
 
-  else {
-    let matchedScore = 0;
-    const usedIndexes = new Set<number>();
+  if (
+    exactShortMatches === shorterTokens.length &&
+    shorterTokens.length >= 1
+  ) {
+    return {
+      inputName: originalInput,
+      givenName: originalGiven,
+      percentage: 90,
+      remark: "High Similarity",
+    };
+  }
 
-    for (const g of givenTokens) {
-      let bestMatch = 0;
-      let bestIndex = -1;
+  let initialMatchCount = 0;
+  let fullTokenMatchCount = 0;
 
-      inputTokens.forEach((i, idx) => {
-        if (usedIndexes.has(idx)) return;
-
-        if (i.startsWith(g) || g.startsWith(i)) {
-          const similarity =
-            Math.min(i.length, g.length) / Math.max(i.length, g.length);
-          if (similarity > bestMatch) {
-            bestMatch = similarity;
-            bestIndex = idx;
-          }
+  for (const g of givenTokens) {
+    if (/^[a-z]{1,3}$/.test(g) && !/[aeiou]/.test(g)) {
+      const letters = g.split("");
+      for (const letter of letters) {
+        if (inputTokens.some(t => t.startsWith(letter))) {
+          initialMatchCount++;
         }
+      }
+    } else if (g.length === 1) {
+      if (inputTokens.some(t => t.startsWith(g))) {
+        initialMatchCount++;
+      }
+    } else if (inputTokens.includes(g)) {
+      fullTokenMatchCount++;
+    }
+  }
 
-        const distance = levenshtein(i, g);
-        const similarity = 1 - distance / Math.max(i.length, g.length);
-        if (similarity > bestMatch) {
-          bestMatch = similarity;
-          bestIndex = idx;
-        }
+  if (fullTokenMatchCount >= 1 && initialMatchCount >= 1) {
+    return {
+      inputName: originalInput,
+      givenName: originalGiven,
+      percentage: 88 + Math.min(initialMatchCount * 2, 6),
+      remark: "High Similarity",
+    };
+  }
 
-        if (isInitialMatch(i, g)) {
-          const initialScore = 0.85;
-          if (initialScore > bestMatch) {
-            bestMatch = initialScore;
-            bestIndex = idx;
-          }
-        }
-      });
+  let strongMatches: string[] = [];
 
-      if (bestIndex !== -1) {
-        usedIndexes.add(bestIndex);
-        matchedScore += bestMatch;
+  for (const g of givenTokens) {
+    for (const i of inputTokens) {
+      const distance = levenshtein(i, g);
+      const similarity =
+        1 - distance / Math.max(i.length, g.length);
+
+      if (similarity >= 0.95) {
+        strongMatches.push(g);
       }
     }
+  }
 
-    const coverage = matchedScore / inputTokens.length;
-    const precision = matchedScore / givenTokens.length;
-    score = Math.round((coverage * 0.65 + precision * 0.5) * 100);
+  if (strongMatches.length === 1) {
+    const remainingGiven = givenTokens.filter(
+      t => !strongMatches.includes(t)
+    );
+    const remainingInput = inputTokens.filter(
+      t => !strongMatches.includes(t)
+    );
 
-    if (score >= 98 && inputName !== givenName) {
-      score = 95;
+    let secondarySimilarity = 0;
+
+    if (remainingGiven.length && remainingInput.length) {
+      const d = levenshtein(
+        remainingGiven[0],
+        remainingInput[0]
+      );
+      secondarySimilarity =
+        1 - d /
+        Math.max(
+          remainingGiven[0].length,
+          remainingInput[0].length
+        );
+    }
+
+    if (secondarySimilarity >= 0.6) {
+      return {
+        inputName: originalInput,
+        givenName: originalGiven,
+        percentage: 82,
+        remark: "Possible Match",
+      };
+    } else {
+      return {
+        inputName: originalInput,
+        givenName: originalGiven,
+        percentage: 40,
+        remark: "Low Match",
+      };
     }
   }
 
+  let matchedScore = 0;
+  const usedIndexes = new Set<number>();
 
-const strongFullMatches = givenTokens.filter(
-  (g) => g.length > 1 && inputTokens.includes(g)
-);
+  for (const g of givenTokens) {
+    let bestMatch = 0;
+    let bestIndex = -1;
 
-if (strongFullMatches.length === 1 && inputTokens.length === givenTokens.length) {
+    inputTokens.forEach((i, idx) => {
+      if (usedIndexes.has(idx)) return;
 
-  const unmatchedInput = inputTokens.find(
-    (t) => !givenTokens.includes(t)
-  );
+      const distance = levenshtein(i, g);
+      const similarity =
+        1 - distance / Math.max(i.length, g.length);
 
-  const unmatchedGiven = givenTokens.find(
-    (t) => !inputTokens.includes(t)
-  );
+      if (similarity > bestMatch) {
+        bestMatch = similarity;
+        bestIndex = idx;
+      }
 
-  if (unmatchedInput && unmatchedGiven) {
+      if (isInitialMatch(i, g) && 0.9 > bestMatch) {
+        bestMatch = 0.9;
+        bestIndex = idx;
+      }
+    });
 
-    const distance = levenshtein(unmatchedInput, unmatchedGiven);
-    const similarity = 1 - distance / Math.max(unmatchedInput.length, unmatchedGiven.length);
-
-
-    const penalty = Math.round((1 - similarity) * 60);
-
-    score = score - penalty;
-
-    score = Math.min(score, 85);
+    if (bestIndex !== -1) {
+      usedIndexes.add(bestIndex);
+      matchedScore += bestMatch;
+    }
   }
-}
+
+  const coverage = matchedScore / inputTokens.length;
+  const precision = matchedScore / givenTokens.length;
+
+  let score = Math.round((coverage * 0.7 + precision * 0.6) * 100);
+
+  if (mergeSimilarity < 0.6) {
+    const totalLength = inputNoSpace.length;
+
+    if (totalLength <= 6) score -= mergeDistance * 4;
+    else if (totalLength <= 12) score -= mergeDistance * 2;
+    else score -= mergeDistance * 1;
+  }
+
+  score = Math.max(0, Math.min(100, score));
 
   let remark: string;
   if (score === 100) remark = "Exact Match";
