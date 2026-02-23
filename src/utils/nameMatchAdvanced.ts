@@ -104,8 +104,14 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
 
   let score = 0;
 
-  if (inputName === givenName) score = 100;
-  else if (isSwappedMatch(inputTokens, givenTokens)) score = 99;
+  if (inputName === givenName) {
+    score = 100;
+  }
+
+  else if (isSwappedMatch(inputTokens, givenTokens)) {
+    score = 99;
+  }
+
   else if (
     givenTokens.every((t) => inputTokens.includes(t)) ||
     inputTokens.every((t) => givenTokens.includes(t))
@@ -114,7 +120,9 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
     const shorter = Math.min(inputTokens.length, givenTokens.length);
     const diff = longer - shorter;
 
-    const hasFullTokenMatch = givenTokens.some((t) => t.length > 1 && inputTokens.includes(t));
+    const hasFullTokenMatch = givenTokens.some(
+      (t) => t.length > 1 && inputTokens.includes(t)
+    );
 
     if (hasFullTokenMatch) {
       if (diff === 0) score = 99;
@@ -124,7 +132,9 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
       const matchRatio = shorter / longer;
       score = Math.round(matchRatio * 60);
     }
-  } else {
+  }
+
+  else {
     let matchedScore = 0;
     const usedIndexes = new Set<number>();
 
@@ -136,7 +146,8 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
         if (usedIndexes.has(idx)) return;
 
         if (i.startsWith(g) || g.startsWith(i)) {
-          const similarity = Math.min(1, (Math.min(i.length, g.length) / Math.max(i.length, g.length)) * 1.1);
+          const similarity =
+            Math.min(i.length, g.length) / Math.max(i.length, g.length);
           if (similarity > bestMatch) {
             bestMatch = similarity;
             bestIndex = idx;
@@ -145,9 +156,8 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
 
         const distance = levenshtein(i, g);
         const similarity = 1 - distance / Math.max(i.length, g.length);
-        const weighted = Math.min(1, similarity * 1.05);
-        if (weighted > bestMatch) {
-          bestMatch = weighted;
+        if (similarity > bestMatch) {
+          bestMatch = similarity;
           bestIndex = idx;
         }
 
@@ -170,19 +180,41 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
     const precision = matchedScore / givenTokens.length;
     score = Math.round((coverage * 0.65 + precision * 0.5) * 100);
 
-    if (score >= 98 && inputName !== givenName) score = 95;
+    if (score >= 98 && inputName !== givenName) {
+      score = 95;
+    }
   }
+
   const inputHasFull = inputTokens.some((t) => t.length > 1);
   const givenHasFull = givenTokens.some((t) => t.length > 1);
   const inputAllInitials = inputTokens.every((t) => t.length === 1);
   const givenAllInitials = givenTokens.every((t) => t.length === 1);
-  const fullTokenMatchExists = givenTokens.some((g) => g.length > 1 && inputTokens.includes(g));
+  const fullTokenMatchExists = givenTokens.some(
+    (g) => g.length > 1 && inputTokens.includes(g)
+  );
+
+  const fullMatches = givenTokens.filter(
+    (g) => g.length > 1 && inputTokens.includes(g)
+  );
+
+  const hasSingleInitialMismatch =
+    fullMatches.length === 1 &&
+    inputTokens.length === 2 &&
+    givenTokens.length === 2 &&
+    (inputTokens.some((t) => t.length === 1) ||
+      givenTokens.some((t) => t.length === 1));
+
+  if (hasSingleInitialMismatch) {
+    score = Math.max(score, 85);
+  }
+
 
   if ((inputHasFull && givenAllInitials) || (givenHasFull && inputAllInitials)) {
     score = Math.min(score, 65);
   } else if (inputHasFull && givenHasFull && !fullTokenMatchExists) {
     score = Math.min(score, 65);
   }
+
 
   let remark: string;
   if (score === 100) remark = "Exact Match";
