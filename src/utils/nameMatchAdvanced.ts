@@ -20,6 +20,20 @@ export function normalizeName(name: string | undefined): string {
     .join(" ");
 }
 
+export function removeDuplicateTokens(tokens: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const token of tokens) {
+    if (!seen.has(token)) {
+      seen.add(token);
+      result.push(token);
+    }
+  }
+
+  return result;
+}
+
 export function mergeInitials(name: string): string {
   return name.replace(/\b([a-z])\.\s*([a-z])\./g, "$1$2");
 }
@@ -99,8 +113,18 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
   inputName = mergeInitials(normalizeName(inputName));
   givenName = mergeInitials(normalizeName(givenName));
 
-  const inputTokens = tokenize(inputName);
-  const givenTokens = tokenize(givenName);
+  let inputTokens = tokenize(inputName);
+  let givenTokens = tokenize(givenName);
+
+  // Remove duplicate tokens
+  inputTokens = removeDuplicateTokens(inputTokens);
+  givenTokens = removeDuplicateTokens(givenTokens);
+
+  // Rebuild cleaned names after duplicate removal
+  inputName = inputTokens.join(" ");
+  givenName = givenTokens.join(" ");
+
+
 
   const inputNoSpace = inputName.replace(/\s+/g, "");
   const givenNoSpace = givenName.replace(/\s+/g, "");
