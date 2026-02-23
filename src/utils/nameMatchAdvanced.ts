@@ -187,10 +187,14 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
     }
   }
 
-  if (
-    exactShortMatches === shorterTokens.length &&
-    shorterTokens.length >= 1
-  ) {
+  const validShortName =
+  shorterTokens.length > 1 ||
+  shorterTokens.some(t => t.length >= 3);
+
+if (
+  validShortName &&
+  exactShortMatches === shorterTokens.length
+) {
     return {
       inputName: originalInput,
       givenName: originalGiven,
