@@ -164,7 +164,7 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
     return {
       inputName: originalInput,
       givenName: originalGiven,
-      percentage: Math.round(mergeSimilarity * 100),
+      percentage: Math.min(99, Math.round(mergeSimilarity * 100)),
       remark: "High Similarity",
     };
   }
@@ -330,7 +330,7 @@ if (
     else score -= mergeDistance * 1;
   }
 
-  score = Math.max(0, Math.min(100, score));
+  score = Math.max(0, Math.min(99, score));
 
   let remark: string;
   if (score === 100) remark = "Exact Match";
