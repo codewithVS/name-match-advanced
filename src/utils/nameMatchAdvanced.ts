@@ -1,4 +1,3 @@
-
 const COMMON_PREFIXES = ["mr", "mrs", "ms", "miss", "shri", "smt", "dr"];
 
 export interface MatchResult {
@@ -7,7 +6,6 @@ export interface MatchResult {
   percentage: number;
   remark: string;
 }
-
 
 export function normalizeName(name: string | undefined): string {
   if (!name) return "";
@@ -45,7 +43,12 @@ export function expandCombinedInitials(tokens: string[]): string[] {
 }
 
 export function normalizeInitialToken(token: string): string {
-  if (token.length >= 2 && token.length <= 4 && /^[a-z]+$/.test(token) && !/[aeiou]/.test(token)) {
+  if (
+    token.length >= 2 &&
+    token.length <= 4 &&
+    /^[a-z]+$/.test(token) &&
+    !/[aeiou]/.test(token)
+  ) {
     return token.split("").sort().join("");
   }
   return token;
@@ -104,9 +107,6 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
 
   let score = 0;
 
-  // =============================
-  // 1️⃣ Exact Match
-  // =============================
   if (inputName === givenName) {
     score = 100;
   }
@@ -114,6 +114,7 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
   else if (isSwappedMatch(inputTokens, givenTokens)) {
     score = 99;
   }
+
   else if (
     givenTokens.every((t) => inputTokens.includes(t)) ||
     inputTokens.every((t) => givenTokens.includes(t))
@@ -187,47 +188,34 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
     }
   }
 
-  const inputHasFull = inputTokens.some((t) => t.length > 1);
-  const givenHasFull = givenTokens.some((t) => t.length > 1);
-  const inputAllInitials = inputTokens.every((t) => t.length === 1);
-  const givenAllInitials = givenTokens.every((t) => t.length === 1);
 
-  const fullTokenMatchExists = givenTokens.some(
-    (g) => g.length > 1 && inputTokens.includes(g)
+const strongFullMatches = givenTokens.filter(
+  (g) => g.length > 1 && inputTokens.includes(g)
+);
+
+if (strongFullMatches.length === 1 && inputTokens.length === givenTokens.length) {
+
+  const unmatchedInput = inputTokens.find(
+    (t) => !givenTokens.includes(t)
   );
 
-  const strongFullMatches = givenTokens.filter(
-    (g) => g.length > 1 && inputTokens.includes(g)
+  const unmatchedGiven = givenTokens.find(
+    (t) => !inputTokens.includes(t)
   );
 
-  const givenHasInitialOnly = givenTokens.some((t) => t.length === 1);
+  if (unmatchedInput && unmatchedGiven) {
+
+    const distance = levenshtein(unmatchedInput, unmatchedGiven);
+    const similarity = 1 - distance / Math.max(unmatchedInput.length, unmatchedGiven.length);
 
 
-  const hasSingleInitialMismatch =
-    strongFullMatches.length === 1 &&
-    inputTokens.length === 2 &&
-    givenTokens.length === 2 &&
-    (inputTokens.some((t) => t.length === 1) ||
-      givenTokens.some((t) => t.length === 1));
+    const penalty = Math.round((1 - similarity) * 60);
 
-  if (hasSingleInitialMismatch) {
-    score = Math.max(score, 85);
+    score = score - penalty;
+
+    score = Math.min(score, 85);
   }
-
-  if (
-    strongFullMatches.length === 1 &&
-    givenHasInitialOnly &&
-    inputTokens.length > givenTokens.length
-  ) {
-    score = Math.max(score, 82);
-  }
-
-
-  if ((inputHasFull && givenAllInitials) || (givenHasFull && inputAllInitials)) {
-    score = Math.min(score, 65);
-  } else if (inputHasFull && givenHasFull && !fullTokenMatchExists) {
-    score = Math.min(score, 65);
-  }
+}
 
   let remark: string;
   if (score === 100) remark = "Exact Match";
