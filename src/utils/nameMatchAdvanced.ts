@@ -1,5 +1,10 @@
 const COMMON_PREFIXES = ["mr", "mrs", "ms", "miss", "shri", "smt", "dr"];
 
+// const COMMON_SURNAMES = [
+//   "singh", "kaur", "kumar", "devi", "patel", "sharma",
+//   "reddy", "yadav", "gupta", "rao", "das"
+// ];
+
 export interface MatchResult {
   inputName: string;
   givenName: string;
@@ -9,6 +14,7 @@ export interface MatchResult {
 
 export function normalizeName(name: string | undefined): string {
   if (!name) return "";
+
 
   return name
     .toLowerCase()
@@ -110,21 +116,28 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
   const originalInput = inputName;
   const originalGiven = givenName;
 
+if (
+  !inputName ||
+  !givenName ||
+  inputName.trim() === "" ||
+  givenName.trim() === ""
+) {
+  return {
+    inputName: originalInput || "",
+    givenName: originalGiven || "",
+    percentage: 0,
+    remark: "Low Match",
+  };
+}
+
   inputName = mergeInitials(normalizeName(inputName));
   givenName = mergeInitials(normalizeName(givenName));
 
-  let inputTokens = tokenize(inputName);
-  let givenTokens = tokenize(givenName);
+  let inputTokens = removeDuplicateTokens(tokenize(inputName));
+  let givenTokens = removeDuplicateTokens(tokenize(givenName));
 
-  // Remove duplicate tokens
-  inputTokens = removeDuplicateTokens(inputTokens);
-  givenTokens = removeDuplicateTokens(givenTokens);
-
-  // Rebuild cleaned names after duplicate removal
   inputName = inputTokens.join(" ");
   givenName = givenTokens.join(" ");
-
-
 
   const inputNoSpace = inputName.replace(/\s+/g, "");
   const givenNoSpace = givenName.replace(/\s+/g, "");
@@ -138,7 +151,23 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
     };
   }
 
-  if (isSwappedMatch(inputTokens, givenTokens)) {
+  if (
+    (givenTokens.length === 1 && givenTokens[0].length === 1) ||
+    (inputTokens.length === 1 && inputTokens[0].length === 1)
+  ) {
+    return {
+      inputName: originalInput,
+      givenName: originalGiven,
+      percentage: 40,
+      remark: "Low Match",
+    };
+  }
+
+  if (
+    inputTokens.length === givenTokens.length &&
+    inputTokens.slice().sort().join(" ") ===
+      givenTokens.slice().sort().join(" ")
+  ) {
     return {
       inputName: originalInput,
       givenName: originalGiven,
@@ -160,7 +189,7 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
   const mergeSimilarity =
     1 - mergeDistance / Math.max(inputNoSpace.length, givenNoSpace.length);
 
-  if (mergeSimilarity >= 0.88) {
+  if (mergeSimilarity >= 0.92) {
     return {
       inputName: originalInput,
       givenName: originalGiven,
@@ -169,137 +198,129 @@ export function matchNames(inputName: string, givenName: string): MatchResult {
     };
   }
 
-  const shorterTokens =
-    inputTokens.length <= givenTokens.length
-      ? inputTokens
-      : givenTokens;
-
-  const longerTokens =
-    inputTokens.length > givenTokens.length
-      ? inputTokens
-      : givenTokens;
-
-      let strongShortMatches = 0;
-
-      for (const s of shorterTokens) {
-        let matched = false;
-      
-        for (const l of longerTokens) {
-          if (s === l) {
-            matched = true;
-            break;
-          }
-      
-          // Allow initial match (R vs Ramaswamy)
-          if (s.length === 1 && l.startsWith(s)) {
-            matched = true;
-            break;
-          }
-      
-          if (l.length === 1 && s.startsWith(l)) {
-            matched = true;
-            break;
-          }
-        }
-      
-        if (matched) strongShortMatches++;
-      }
-
-  const validShortName =
-  shorterTokens.length > 1 ||
-  shorterTokens.some(t => t.length >= 3);
-
 if (
-  validShortName &&
-  strongShortMatches === shorterTokens.length
+  (inputTokens.length === 2 && givenTokens.length === 1) ||
+  (givenTokens.length === 2 && inputTokens.length === 1)
 ) {
+  const longer = inputTokens.length === 2 ? inputTokens : givenTokens;
+  const shorter = inputTokens.length === 1 ? inputTokens : givenTokens;
+
+  if (longer.includes(shorter[0])) {
     return {
       inputName: originalInput,
       givenName: originalGiven,
-      percentage: 90,
+      percentage: 85,
       remark: "High Similarity",
     };
   }
+}
 
-  let initialMatchCount = 0;
-  let fullTokenMatchCount = 0;
-
-  for (const g of givenTokens) {
-    if (/^[a-z]{1,3}$/.test(g) && !/[aeiou]/.test(g)) {
-      const letters = g.split("");
-      for (const letter of letters) {
-        if (inputTokens.some(t => t.startsWith(letter))) {
-          initialMatchCount++;
-        }
-      }
-    } else if (g.length === 1) {
-      if (inputTokens.some(t => t.startsWith(g))) {
-        initialMatchCount++;
-      }
-    } else if (inputTokens.includes(g)) {
-      fullTokenMatchCount++;
-    }
-  }
-
-  if (fullTokenMatchCount >= 1 && initialMatchCount >= 1) {
-    return {
-      inputName: originalInput,
-      givenName: originalGiven,
-      percentage: 88 + Math.min(initialMatchCount * 2, 6),
-      remark: "High Similarity",
-    };
-  }
-
-  let strongMatches: string[] = [];
+  let exactMatches: string[] = [];
 
   for (const g of givenTokens) {
     for (const i of inputTokens) {
-      const distance = levenshtein(i, g);
-      const similarity =
-        1 - distance / Math.max(i.length, g.length);
-
-      if (similarity >= 0.95) {
-        strongMatches.push(g);
-      }
+      if (i === g) exactMatches.push(g);
     }
   }
 
-  if (strongMatches.length === 1) {
-    const remainingGiven = givenTokens.filter(
-      t => !strongMatches.includes(t)
-    );
-    const remainingInput = inputTokens.filter(
-      t => !strongMatches.includes(t)
-    );
+  if (exactMatches.length === 1 && inputTokens.length >= 2) {
+    const matchedToken = exactMatches[0];
 
-    let secondarySimilarity = 0;
+    const isFirstMatch =
+      inputTokens[0] === matchedToken ||
+      givenTokens[0] === matchedToken;
 
-    if (remainingGiven.length && remainingInput.length) {
-      const d = levenshtein(
-        remainingGiven[0],
-        remainingInput[0]
-      );
-      secondarySimilarity =
-        1 - d /
-        Math.max(
-          remainingGiven[0].length,
-          remainingInput[0].length
-        );
+    const isLastMatch =
+      inputTokens[inputTokens.length - 1] === matchedToken ||
+      givenTokens[givenTokens.length - 1] === matchedToken;
+
+    let initialCount = 0;
+    let fullWordSupport = 0;
+
+    for (const g of givenTokens.slice(1)) {
+      for (const i of inputTokens.slice(1)) {
+        if (g.length === 1 && i.startsWith(g)) initialCount++;
+        if (g.length > 1 && i === g) fullWordSupport++;
+      }
     }
 
-    if (secondarySimilarity >= 0.6) {
+    if (isFirstMatch && !isLastMatch) {
+      if (fullWordSupport >= 2) {
+        return {
+          inputName: originalInput,
+          givenName: originalGiven,
+          percentage: 92,
+          remark: "High Similarity",
+        };
+      }
+
+      if (initialCount >= 2) {
+        return {
+          inputName: originalInput,
+          givenName: originalGiven,
+          percentage: 88,
+          remark: "High Similarity",
+        };
+      }
+
+      if (initialCount === 1) {
+        return {
+          inputName: originalInput,
+          givenName: originalGiven,
+          percentage: 82,
+          remark: "High Similarity",
+        };
+      }
+
       return {
         inputName: originalInput,
         givenName: originalGiven,
-        percentage: 82,
+        percentage: 75,
         remark: "Possible Match",
       };
-    } else {
+    }
+
+    if (isLastMatch && initialCount >= 1) {
       return {
         inputName: originalInput,
         givenName: originalGiven,
-        percentage: 40,
+        percentage: 70,
+        remark: "Possible Match",
+      };
+    }
+
+    if (isLastMatch && initialCount === 0) {
+      return {
+        inputName: originalInput,
+        givenName: originalGiven,
+        percentage: 55,
         remark: "Low Match",
+      };
+    }
+  }
+
+  if (inputTokens.length === givenTokens.length) {
+    const sortedInput = inputTokens.slice().sort();
+    const sortedGiven = givenTokens.slice().sort();
+
+    let strongTokenMatches = 0;
+
+    for (let i = 0; i < sortedInput.length; i++) {
+      const dist = levenshtein(sortedInput[i], sortedGiven[i]);
+      const sim =
+        1 -
+        dist /
+          Math.max(sortedInput[i].length, sortedGiven[i].length);
+
+      if (sim >= 0.85) strongTokenMatches++;
+    }
+
+    if (strongTokenMatches === sortedInput.length) {
+      return {
+        inputName: originalInput,
+        givenName: originalGiven,
+        percentage: 92,
+        remark: "High Similarity",
       };
     }
   }
@@ -308,30 +329,30 @@ if (
   const usedIndexes = new Set<number>();
 
   for (const g of givenTokens) {
-    let bestMatch = 0;
+    let best = 0;
     let bestIndex = -1;
 
     inputTokens.forEach((i, idx) => {
       if (usedIndexes.has(idx)) return;
 
-      const distance = levenshtein(i, g);
-      const similarity =
-        1 - distance / Math.max(i.length, g.length);
+      const dist = levenshtein(i, g);
+      const sim =
+        1 - dist / Math.max(i.length, g.length);
 
-      if (similarity > bestMatch) {
-        bestMatch = similarity;
+      if (sim > best) {
+        best = sim;
         bestIndex = idx;
       }
 
-      if (isInitialMatch(i, g) && 0.9 > bestMatch) {
-        bestMatch = 0.9;
+      if (isInitialMatch(i, g) && 0.9 > best) {
+        best = 0.9;
         bestIndex = idx;
       }
     });
 
     if (bestIndex !== -1) {
       usedIndexes.add(bestIndex);
-      matchedScore += bestMatch;
+      matchedScore += best;
     }
   }
 
@@ -341,10 +362,8 @@ if (
   let score = Math.round((coverage * 0.7 + precision * 0.6) * 100);
 
   if (mergeSimilarity < 0.6) {
-    const totalLength = inputNoSpace.length;
-
-    if (totalLength <= 6) score -= mergeDistance * 4;
-    else if (totalLength <= 12) score -= mergeDistance * 2;
+    if (inputNoSpace.length <= 6) score -= mergeDistance * 4;
+    else if (inputNoSpace.length <= 12) score -= mergeDistance * 2;
     else score -= mergeDistance * 1;
   }
 
@@ -352,7 +371,7 @@ if (
 
   let remark: string;
   if (score === 100) remark = "Exact Match";
-  else if (score >= 90) remark = "High Similarity";
+  else if (score >= 80) remark = "High Similarity";
   else if (score >= 70) remark = "Possible Match";
   else remark = "Low Match";
 
