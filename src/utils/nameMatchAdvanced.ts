@@ -171,7 +171,7 @@ if (
     return {
       inputName: originalInput,
       givenName: originalGiven,
-      percentage: 99,
+      percentage: 94,
       remark: "High Similarity",
     };
   }
@@ -193,7 +193,7 @@ if (
     return {
       inputName: originalInput,
       givenName: originalGiven,
-      percentage: Math.min(99, Math.round(mergeSimilarity * 100)),
+      percentage: Math.min(96, Math.round(mergeSimilarity * 100)),
       remark: "High Similarity",
     };
   }
