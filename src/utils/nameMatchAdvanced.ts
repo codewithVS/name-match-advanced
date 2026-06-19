@@ -367,7 +367,7 @@ if (
     else score -= mergeDistance * 1;
   }
 
-  score = Math.max(0, Math.min(99, score));
+  score = Math.max(0, Math.min(96, score));
 
   let remark: string;
   if (score === 100) remark = "Exact Match";
